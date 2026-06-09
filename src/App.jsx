@@ -47,9 +47,9 @@ function App() {
     checkAuth();
   }, [token]);
 
-  // Start the page tracking on load
+  // Start the page tracking on load (passing false so it doesn't track the dashboard site itself)
   useEffect(() => {
-    tracker.init();
+    tracker.init(false);
   }, []);
 
   const handleLogin = (authToken, loggedInUser) => {
