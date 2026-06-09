@@ -105,6 +105,27 @@ app.post('/api/analytics/track', async (req, res) => {
       return res.status(400).json({ error: 'pageUrl and sessionId are required' });
     }
 
+    // If duration > 0, check if we can update the duration of an existing record for this session/url
+    if (duration > 0) {
+      const existingEvent = await PageEvent.findOne({
+        where: {
+          sessionId,
+          pageUrl,
+          duration: 0
+        },
+        order: [['timestamp', 'DESC']]
+      });
+
+      if (existingEvent) {
+        existingEvent.duration = duration;
+        if (userId) {
+          existingEvent.userId = userId;
+        }
+        await existingEvent.save();
+        return res.status(200).json({ success: true, eventId: existingEvent.id, updated: true });
+      }
+    }
+
     const event = await PageEvent.create({
       pageUrl,
       referrer: referrer || 'Direct',

@@ -77,9 +77,16 @@ const getCountry = () => {
   return 'US'; // Default fallback
 };
 
-let currentPath = window.location.pathname;
+let currentPath = null;
 let pageStartTime = Date.now();
 let lastReferrer = document.referrer || 'Direct';
+
+const handleBeforeUnload = () => {
+  if (currentPath) {
+    const duration = Math.round((Date.now() - pageStartTime) / 1000);
+    sendTrackEvent(currentPath, lastReferrer, duration);
+  }
+};
 
 // Clean referrer URL to extract hostname
 const formatReferrer = (ref) => {
@@ -136,6 +143,8 @@ const sendTrackEvent = async (path, referrer, duration = 0) => {
 const tracker = {
   // Track page view transition
   trackPageview: (newPath) => {
+    if (!newPath || newPath === currentPath) return;
+
     const timeSpent = Math.round((Date.now() - pageStartTime) / 1000);
     
     // Log previous page view duration if it was active
@@ -153,18 +162,20 @@ const tracker = {
   },
 
   // Track initial page load
-  init: () => {
-    currentPath = window.location.pathname;
+  init: (shouldTrackInitialPage = true) => {
     pageStartTime = Date.now();
     lastReferrer = document.referrer || 'Direct';
     
-    sendTrackEvent(currentPath, lastReferrer, 0);
+    if (shouldTrackInitialPage) {
+      currentPath = window.location.pathname;
+      sendTrackEvent(currentPath, lastReferrer, 0);
+    } else {
+      currentPath = null;
+    }
 
     // Track page close or navigation away
-    window.addEventListener('beforeunload', () => {
-      const duration = Math.round((Date.now() - pageStartTime) / 1000);
-      sendTrackEvent(currentPath, lastReferrer, duration);
-    });
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
   }
 };
 
